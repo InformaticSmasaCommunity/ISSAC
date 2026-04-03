@@ -8,9 +8,12 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/chat",
       "dest": "app.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
-  ],
-  "includeFiles": ["data.json"]
+  ]
 }
