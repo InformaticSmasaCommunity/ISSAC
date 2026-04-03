@@ -15,6 +15,5 @@
       "src": "/(.*)",
       "dest": "/$1"
     }
-  ],
-  "includeFiles": ["data.json"]
+  ]
 }
