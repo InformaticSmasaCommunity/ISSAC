@@ -5,9 +5,11 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
+
+// Melayani file statis seperti index.html dan style.css
 app.use(express.static(__dirname));
 
-// API KEY GEMINI
+// Konfigurasi Gemini AI
 const genAI = new GoogleGenerativeAI("AIzaSyBwHoMhW-M6HaG7qYcFY2e0zlffsFdiy2c");
 
 app.get('/', (req, res) => {
@@ -18,8 +20,12 @@ app.post('/chat', async (req, res) => {
     try {
         const userMsg = (req.body.pesan || "").toLowerCase().trim();
         
-        // Membaca file data.json secara aman di Vercel
+        // Membaca data.json dengan path yang benar untuk serverless
         const dbPath = path.join(process.cwd(), 'data.json');
+        if (!fs.existsSync(dbPath)) {
+            return res.json({ jawaban: "Error: File data.json tidak ditemukan." });
+        }
+        
         const dbData = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
         
         let dataDitemukan = null;
@@ -33,7 +39,7 @@ app.post('/chat', async (req, res) => {
             return res.json({ jawaban: dataDitemukan.jawaban, list: dataDitemukan.bagian || [] });
         }
 
-        // Jika tidak ada di DB, langsung tanya Gemini
+        // Jika tidak ada di database, tanya Gemini
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(`Jawab singkat dalam bahasa Indonesia: ${userMsg}`);
         const response = await result.response;
@@ -45,4 +51,5 @@ app.post('/chat', async (req, res) => {
     }
 });
 
+// Penting untuk Vercel
 module.exports = app;
