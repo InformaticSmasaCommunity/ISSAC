@@ -5,15 +5,18 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
 
-// GANTI DENGAN API KEY ANDA
+// Melayani file statis (index.html, style.css, dll)
+app.use(express.static(path.join(__dirname)));
+
+// GANTI DENGAN API KEY GEMINI ANDA
 const genAI = new GoogleGenerativeAI("AIzaSyBwHoMhW-M6HaG7qYcFY2e0zlffsFdiy2c");
 let pendingQuestion = {};
 
-// Fungsi pembantu untuk memberikan delay (efek berpikir)
+// Fungsi delay untuk efek mengetik
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Route utama untuk memanggil index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -23,10 +26,9 @@ app.post('/chat', async (req, res) => {
     const userMsg = (req.body.pesan || "").toLowerCase().trim();
 
     try {
-        // Efek buffer agar typing indicator di frontend terlihat nyata
-        await delay(1200); 
+        await delay(1000); 
 
-        // 1. CEK STATUS PENDING (Pertanyaan konfirmasi untuk Gemini)
+        // 1. CEK STATUS PENDING (Konfirmasi Gemini)
         if (pendingQuestion[userId]) {
             if (['ya', 'boleh', 'lanjut', 'oke', 'gas'].includes(userMsg)) {
                 const originalQuery = pendingQuestion[userId];
@@ -38,7 +40,7 @@ app.post('/chat', async (req, res) => {
                 });
 
                 const prompt = `Berikan informasi singkat tentang "${originalQuery}". 
-                WAJIB format JSON: {"jawaban": "isi jawaban singkat", "bagian": ["list item 1", "list item 2"] jika tidak ada list biarkan array kosong}`;
+                WAJIB format JSON: {"jawaban": "isi jawaban singkat", "bagian": ["item 1", "item 2"]}`;
                 
                 const result = await model.generateContent(prompt);
                 const responseText = result.response.text();
@@ -49,17 +51,23 @@ app.post('/chat', async (req, res) => {
                     list: parsedJson.bagian || [] 
                 });
             } 
-            else if (['tidak', 'gak', 'batal', 'no', 'gk'].includes(userMsg)) {
+            else if (['tidak', 'gak', 'batal', 'no'].includes(userMsg)) {
                 delete pendingQuestion[userId];
-                return res.json({ jawaban: "Baik, permintaan dibatalkan. Ada lagi yang bisa saya bantu terkait data ISSAC?" });
+                return res.json({ jawaban: "Baik, permintaan dibatalkan. Ada lagi yang bisa saya bantu?" });
             }
         }
 
-        // 2. CEK DATABASE LOKAL (data.json)
-        const db = JSON.parse(fs.readFileSync('data.json'));
+        // 2. BACA DATABASE LOKAL (Gunakan path.join agar Vercel tidak error)
+        const dbPath = path.join(process.cwd(), 'data.json');
+        
+        if (!fs.existsSync(dbPath)) {
+            return res.json({ jawaban: "Error: File data.json tidak ditemukan di server." });
+        }
+
+        const dbRaw = fs.readFileSync(dbPath, 'utf8');
+        const db = JSON.parse(dbRaw);
         let dataDitemukan = null;
 
-        // Mencari keyword yang cocok di data.json
         db.pengetahuan.forEach(item => {
             if (item.keywords.some(k => userMsg.includes(k.toLowerCase()))) {
                 dataDitemukan = item;
@@ -73,23 +81,25 @@ app.post('/chat', async (req, res) => {
             });
         }
 
-        // 3. JIKA TIDAK ADA DI DATABASE, TAWARKAN GEMINI
+        // 3. JIKA TIDAK ADA DI DB, TAWARKAN GEMINI
         pendingQuestion[userId] = userMsg;
         res.json({ 
-            jawaban: `Info tentang "${userMsg}" tidak ditemukan di database internal ISSAC. Mau mencari lewat kecerdasan AI? (Balas 'Ya' untuk lanjut atau 'Tidak' untuk batal)` 
+            jawaban: `Info tentang "${userMsg}" tidak ada di database ISSAC. Cari lewat AI? (Balas 'Ya' atau 'Tidak')` 
         });
 
     } catch (error) {
-        console.error("LOG ERROR:", error.message);
+        console.error("Error Detail:", error);
         res.json({ 
-            jawaban: "Maaf, terjadi kendala pada model XM1. Detail: " + error.message 
+            jawaban: "Maaf, ISSAC sedang gangguan. Detail: " + error.message 
         });
     }
 });
 
-const PORT = 3000;
+// Port otomatis untuk Vercel/Render atau lokal (3000)
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log("========================================");
-    console.log(`ISSAC M1 RUNNING: http://localhost:${PORT}`);
-    console.log("========================================");
+    console.log(`Server running on port ${PORT}`);
 });
+
+// Export untuk Vercel
+module.exports = app;
