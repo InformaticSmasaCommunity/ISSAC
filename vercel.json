@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "issac-intelligence",
   "builds": [
     {
       "src": "app.js",
@@ -13,7 +14,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "app.js"
     }
   ]
 }
