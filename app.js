@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-const genAI = new GoogleGenerativeAI("AIzaSyBwHoMhW-M6HaG7qYcFY2e0zlffsFdiy2c");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
 // Route ke halaman utama
 app.get('/', (req, res) => {
