@@ -2,8 +2,6 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require('fs');
 const path = require('path');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 module.exports = async (req, res) => {
   try {
     if (req.method !== "POST") {
@@ -16,16 +14,25 @@ module.exports = async (req, res) => {
       return res.json({ jawaban: "Pesan kosong.", list: [] });
     }
 
-    // Load JSON
-    const dbPath = path.join(process.cwd(), 'data.json');
-    const dbData = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+    // ✅ SAFE LOAD JSON
+    let dbData;
+    try {
+      const dbPath = path.join(process.cwd(), 'data.json');
+      const raw = fs.readFileSync(dbPath, 'utf8');
+      dbData = JSON.parse(raw);
+    } catch (err) {
+      return res.json({
+        jawaban: "Error membaca database JSON.",
+        error: err.message
+      });
+    }
 
-    // Cari keyword
+    // ✅ CARI KEYWORD
     let dataDitemukan = null;
 
-    for (const item of dbData.pengetahuan) {
-      if (item.keywords.some(k =>
-        new RegExp(`\\b${k}\\b`, 'i').test(userMsg)
+    for (const item of dbData.pengetahuan || []) {
+      if (item.keywords?.some(k =>
+        userMsg.includes(k.toLowerCase())
       )) {
         dataDitemukan = item;
         break;
@@ -39,7 +46,15 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Fallback AI
+    // ✅ CEK API KEY
+    if (!process.env.GEMINI_API_KEY) {
+      return res.json({
+        jawaban: "API KEY tidak ditemukan di server."
+      });
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash"
     });
@@ -48,11 +63,14 @@ module.exports = async (req, res) => {
 
     const text =
       result?.response?.text?.() ||
-      "AI tidak memberikan jawaban.";
+      "AI tidak memberi respon.";
 
     return res.json({ jawaban: text, list: [] });
 
   } catch (err) {
-    return res.json({ jawaban: "Error: " + err.message });
+    return res.json({
+      jawaban: "Server error",
+      error: err.message
+    });
   }
 };
