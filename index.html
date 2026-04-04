@@ -4,25 +4,205 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ISSAC AI Assistant</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* CSS RESET & BASE */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: #0f172a; 
+            color: white; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            /* Menggunakan dvh agar pas di layar HP yang ada bar navigasinya */
+            height: 100dvh; 
+            overflow: hidden; 
+        }
+
+        /* CHAT CONTAINER */
+        .chat-card { 
+            width: 100%; 
+            max-width: 500px; 
+            height: 100%; 
+            background: #1e293b; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+        }
+
+        .header { 
+            padding: 15px; 
+            background: #3b82f6; 
+            text-align: center; 
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        /* CHAT AREA */
+        #chat-content { 
+            flex: 1; 
+            padding: 15px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            background: #0f172a;
+            scroll-behavior: smooth;
+            /* Memperbaiki scroll di iOS */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* BUBBLE MESSAGES */
+        .msg { 
+            padding: 10px 14px; 
+            border-radius: 18px; 
+            max-width: 85%; 
+            line-height: 1.4;
+            word-wrap: break-word;
+            font-size: 0.95rem;
+            position: relative;
+            animation: slideIn 0.2s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bot { background: #334155; align-self: flex-start; border-bottom-left-radius: 4px; color: #f1f5f9; }
+        .user { background: #3b82f6; align-self: flex-end; border-bottom-right-radius: 4px; color: white; }
+
+        /* LIST STYLING */
+        .msg ul { margin-top: 8px; padding-left: 10px; list-style: none; }
+        .msg li { 
+            margin-bottom: 5px; 
+            padding-left: 8px; 
+            border-left: 2px solid #3b82f6; 
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+
+        /* TYPING INDICATOR */
+        .typing { display: flex; gap: 4px; padding: 10px 14px; width: fit-content; align-items: center; }
+        .dot { width: 6px; height: 6px; background: #94a3b8; border-radius: 50%; animation: pulse 1.5s infinite ease-in-out; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes pulse { 0%, 100% { transform: scale(0.7); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 1; } }
+
+        /* INPUT AREA */
+        .input-box { 
+            padding: 12px; 
+            display: flex; 
+            gap: 8px; 
+            border-top: 1px solid #334155; 
+            background: #1e293b;
+            /* Penting: Mencegah keyboard HP menutupi input */
+            padding-bottom: env(safe-area-inset-bottom, 12px);
+        }
+        
+        input { 
+            flex: 1; 
+            padding: 12px; 
+            border-radius: 10px; 
+            border: none; 
+            background: #334155; 
+            color: white; 
+            font-size: 16px; /* 16px mencegah auto-zoom di browser HP */
+            outline: none; 
+        }
+
+        button { 
+            padding: 0 18px; 
+            background: #3b82f6; 
+            border: none; 
+            border-radius: 10px; 
+            color: white; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: 0.2s; 
+        }
+
+        /* PC VIEW */
+        @media screen and (min-width: 600px) {
+            .chat-card { height: 85vh; border-radius: 16px; border: 1px solid #334155; }
+            .header { border-radius: 16px 16px 0 0; }
+        }
+    </style>
 </head>
 <body>
-
-    <header>
-        ISSAC INTELLIGENCE (XM1)
-    </header>
-
-    <div class="chat-container">
-        <div id="chat-box">
-            <div class="message bot">Halo! Saya ISSAC (XM1). Kamu mau tahu apa tentang ISC?</div>
+    <div class="chat-card">
+        <div class="header">ISSAC INTELLIGENCE (XM1)</div>
+        <div id="chat-content">
+            <div class="msg bot">Halo! Saya ISSAC (XM1). Kamu mau tahu apa tentang ISC?</div>
         </div>
-
-        <form class="input-area" id="chat-form">
-            <input type="text" id="user-input" placeholder="Ketik pesan..." autocomplete="off">
-            <button type="submit" id="send-btn">Kirim</button>
-        </form>
+        <div class="input-box">
+            <input type="text" id="userInput" placeholder="Ketik pesan..." autocomplete="off">
+            <button onclick="kirimPesan()">Kirim</button>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        const chatContent = document.getElementById('chat-content');
+        const userInput = document.getElementById('userInput');
+
+        function appendMessage(text, isUser, listData = []) {
+            const div = document.createElement('div');
+            div.className = `msg ${isUser ? 'user' : 'bot'}`;
+            div.innerText = text;
+
+            if (listData && listData.length > 0) {
+                const ul = document.createElement('ul');
+                listData.forEach(item => {
+                    const li = document.createElement('li');
+                    li.innerText = item;
+                    ul.appendChild(li);
+                });
+                div.appendChild(ul);
+            }
+
+            chatContent.appendChild(div);
+            chatContent.scrollTop = chatContent.scrollHeight;
+            return div;
+        }
+
+        async function kirimPesan() {
+            const pesan = userInput.value.trim();
+            if (!pesan) return;
+
+            appendMessage(pesan, true);
+            userInput.value = '';
+
+            // Loading state
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'msg bot typing';
+            loadingDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+            chatContent.appendChild(loadingDiv);
+            chatContent.scrollTop = chatContent.scrollHeight;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pesan: pesan })
+                });
+
+                const data = await response.json();
+                chatContent.removeChild(loadingDiv);
+                appendMessage(data.jawaban, false, data.list);
+
+            } catch (error) {
+                chatContent.removeChild(loadingDiv);
+                appendMessage("Maaf, koneksi terputus. Coba lagi nanti.", false);
+            }
+        }
+
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') kirimPesan();
+        });
+    </script>
 </body>
 </html>
