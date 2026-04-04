@@ -4,7 +4,7 @@ const path = require("path");
 
 module.exports = async (req, res) => {
   try {
-    // 🔍 DEBUG ENV (WAJIB SEMENTARA)
+    // 🔍 DEBUG ENV
     console.log("ENV CHECK:", process.env.GEMINI_API_KEY ? "ADA" : "KOSONG");
 
     if (req.method !== "POST") {
@@ -17,10 +17,10 @@ module.exports = async (req, res) => {
       return res.json({ jawaban: "Pesan kosong.", list: [] });
     }
 
-    // ✅ LOAD JSON (LEBIH AMAN DI VERCEL)
+    // ✅ LOAD JSON
     let dbData;
     try {
-      const dbPath = path.join(__dirname, "../data.json"); // 🔥 FIX PENTING
+      const dbPath = path.join(__dirname, "../data.json");
       const raw = fs.readFileSync(dbPath, "utf8");
       dbData = JSON.parse(raw);
     } catch (err) {
@@ -60,28 +60,53 @@ module.exports = async (req, res) => {
       });
     }
 
-    // ✅ AI PROCESS
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    // =========================
+    // 🔥 BAGIAN AI (SUDAH DIPERBAIKI TOTAL)
+    // =========================
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-    });
+      const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash-latest", // 🔥 FIX MODEL
+      });
 
-    const result = await model.generateContent(userMsg);
+      const result = await model.generateContent(userMsg);
 
-    const text =
-      result?.response?.text?.() ||
-      "AI tidak memberi respon.";
+      let text = "AI tidak memberi respon.";
 
-    return res.json({
-      jawaban: text,
-      list: [],
-    });
+      // ✅ HANDLE SEMUA FORMAT RESPONSE
+      if (result?.response) {
+        if (typeof result.response.text === "function") {
+          text = result.response.text();
+        } else {
+          text =
+            result.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
+            text;
+        }
+      }
+
+      return res.json({
+        jawaban: text,
+        list: [],
+      });
+
+    } catch (aiError) {
+      console.log("AI ERROR:", aiError);
+
+      return res.json({
+        jawaban: "AI gagal merespon",
+        error: aiError.message,
+        detail: JSON.stringify(aiError),
+      });
+    }
 
   } catch (err) {
+    console.log("SERVER ERROR:", err);
+
     return res.json({
       jawaban: "Server error",
       error: err.message,
+      detail: JSON.stringify(err),
     });
   }
 };
