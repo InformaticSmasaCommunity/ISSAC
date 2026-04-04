@@ -1,8 +1,7 @@
 {
-  "name": "issac-ai",
+  "name": "issac",
   "version": "1.0.0",
-  "type": "commonjs",
   "dependencies": {
-    "@google/generative-ai": "^0.11.0"
+    "@google/generative-ai": "^0.2.0"
   }
 }
