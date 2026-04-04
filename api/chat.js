@@ -20,7 +20,8 @@ module.exports = async (req, res) => {
     // =========================
     let dbData;
     try {
-      const dbPath = path.join(__dirname, "../data.json");
+      // Pastikan path data.json benar sesuai struktur folder di Vercel
+      const dbPath = path.join(process.cwd(), "data.json"); 
       const raw = fs.readFileSync(dbPath, "utf8");
       dbData = JSON.parse(raw);
     } catch (err) {
@@ -34,13 +35,8 @@ module.exports = async (req, res) => {
     // ✅ CARI DI DATABASE
     // =========================
     let dataDitemukan = null;
-
     for (const item of dbData.pengetahuan || []) {
-      if (
-        item.keywords?.some((k) =>
-          userMsg.includes(k.toLowerCase())
-        )
-      ) {
+      if (item.keywords?.some((k) => userMsg.includes(k.toLowerCase()))) {
         dataDitemukan = item;
         break;
       }
@@ -66,13 +62,18 @@ module.exports = async (req, res) => {
     // 🔥 GEMINI VIA REST API
     // =========================
     try {
+      // Menambahkan AbortController agar tidak timeout di Vercel (Limit 10s)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
       const response = await fetch(
-       `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`
+        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
+          signal: controller.signal,
           body: JSON.stringify({
             contents: [
               {
@@ -83,23 +84,20 @@ module.exports = async (req, res) => {
         }
       );
 
+      clearTimeout(timeoutId);
       const data = await response.json();
-
-      console.log("GEMINI RAW:", data);
 
       // ❌ ERROR DARI GOOGLE
       if (data.error) {
         return res.json({
-          jawaban: "AI gagal",
+          jawaban: "AI sedang sibuk atau API bermasalah.",
           error: data.error.message,
         });
       }
 
       let text = "AI tidak memberi respon.";
-
       if (data?.candidates?.length) {
-        text =
-          data.candidates[0]?.content?.parts?.[0]?.text || text;
+        text = data.candidates[0]?.content?.parts?.[0]?.text || text;
       }
 
       return res.json({
@@ -109,16 +107,15 @@ module.exports = async (req, res) => {
 
     } catch (aiErr) {
       return res.json({
-        jawaban: "Fetch error",
+        jawaban: aiErr.name === 'AbortError' ? "Koneksi AI timeout (lewat 8 detik)." : "AI gagal terhubung.",
         error: aiErr.message,
       });
     }
 
   } catch (err) {
     console.log("SERVER ERROR:", err);
-
     return res.json({
-      jawaban: "Server error",
+      jawaban: "Terjadi kesalahan pada server.",
       error: err.message,
     });
   }
