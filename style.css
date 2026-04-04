@@ -1,48 +1,88 @@
-/* Pastikan body tidak scrolling liar di HP */
-body {
+* {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #0f172a;
     height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Mencegah double scroll */
+    overflow: hidden; /* Mencegah scroll double di HP */
 }
 
-/* Container utama harus memenuhi layar */
+/* Header Biru di Atas */
+header {
+    background-color: #3b82f6;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Container Utama */
 .chat-container {
-    flex: 1;
+    flex: 1; /* Mengambil sisa layar yang ada */
     display: flex;
     flex-direction: column;
-    height: 100%;
-    max-width: 100%; /* Agar tidak meluber di HP */
+    width: 100%;
+    max-width: 600px; /* Maksimal lebar di laptop */
+    margin: 0 auto;   /* Tengah di laptop */
+    background: #1e293b;
+    position: relative;
 }
 
-/* Area chat agar bisa scroll sendiri */
+/* Area Chat (Bisa Scroll) */
 #chat-box {
     flex: 1;
     overflow-y: auto;
     padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-/* Bagian Input (Ini yang sering hilang) */
+/* Bubble Chat */
+.message {
+    padding: 10px 15px;
+    border-radius: 15px;
+    max-width: 85%;
+    word-wrap: break-word;
+    font-size: 14px;
+}
+
+.bot { background: #334155; color: white; align-self: flex-start; }
+.user { background: #3b82f6; color: white; align-self: flex-end; }
+
+/* Area Input (WAJIB ADA DI BAWAH) */
 .input-area {
     padding: 15px;
-    background: #1e293b;
+    background: #0f172a;
     display: flex;
     gap: 10px;
     border-top: 1px solid #334155;
-    position: sticky;
-    bottom: 0; /* Mengunci posisi di bawah layar HP */
 }
 
 input {
     flex: 1;
     padding: 12px;
-    border-radius: 8px;
-    border: none;
-    font-size: 16px; /* Mencegah auto-zoom di iPhone */
+    border-radius: 25px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: white;
+    outline: none;
+    font-size: 16px; /* Penting: mencegah zoom otomatis di HP */
 }
 
 button {
-    padding: 10px 20px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
 }
