@@ -4,187 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ISSAC AI Assistant</title>
-    <style>
-        /* CSS RESET & BASE */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background: #0f172a; 
-            color: white; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            overflow: hidden; 
-        }
-
-        /* CHAT CONTAINER */
-        .chat-card { 
-            width: 100%; 
-            max-width: 450px; 
-            height: 100vh; 
-            background: #1e293b; 
-            display: flex; 
-            flex-direction: column; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
-        }
-
-        .header { 
-            padding: 20px; 
-            background: #3b82f6; 
-            text-align: center; 
-            font-size: 1.1rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        /* CHAT AREA */
-        #chat-content { 
-            flex: 1; 
-            padding: 20px; 
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 15px; 
-            background: #0f172a;
-            scroll-behavior: smooth;
-        }
-
-        /* BUBBLE MESSAGES */
-        .msg { 
-            padding: 12px 16px; 
-            border-radius: 18px; 
-            max-width: 85%; 
-            line-height: 1.5;
-            word-wrap: break-word;
-            font-size: 0.95rem;
-            position: relative;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .bot { background: #334155; align-self: flex-start; border-bottom-left-radius: 4px; color: #f1f5f9; }
-        .user { background: #3b82f6; align-self: flex-end; border-bottom-right-radius: 4px; color: white; }
-
-        /* LIST STYLING */
-        .msg ul { margin-top: 10px; padding-left: 15px; list-style: none; }
-        .msg li { 
-            margin-bottom: 8px; 
-            padding-left: 10px; 
-            border-left: 2px solid #3b82f6; 
-            font-size: 0.9rem;
-            color: #cbd5e1;
-        }
-
-        /* TYPING INDICATOR */
-        .typing { display: flex; gap: 5px; padding: 12px 16px; width: fit-content; }
-        .dot { width: 7px; height: 7px; background: #94a3b8; border-radius: 50%; animation: pulse 1.5s infinite ease-in-out; }
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes pulse { 0%, 100% { transform: scale(0.7); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 1; } }
-
-        /* INPUT AREA */
-        .input-box { padding: 15px; display: flex; gap: 10px; border-top: 1px solid #1e293b; background: #1e293b; }
-        input { 
-            flex: 1; padding: 14px; border-radius: 12px; border: none; 
-            background: #334155; color: white; font-size: 16px; outline: none; 
-        }
-        button { 
-            padding: 0 20px; background: #3b82f6; border: none; border-radius: 12px; 
-            color: white; cursor: pointer; font-weight: bold; transition: 0.2s; 
-        }
-        button:hover { background: #2563eb; }
-
-        /* PC VIEW REFINEMENT */
-        @media screen and (min-width: 600px) {
-            .chat-card { height: 650px; border-radius: 24px; }
-            .header { border-radius: 24px 24px 0 0; }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="chat-card">
-        <div class="header">ISSAC INTELLIGENCE (XM1)</div>
-        <div id="chat-content">
-            <div class="msg bot">Halo! Saya ISSAC (XM1). Kamu mau tahu apa tentang ISC?</div>
+
+    <header>
+        ISSAC INTELLIGENCE (XM1)
+    </header>
+
+    <div class="chat-container">
+        <div id="chat-box">
+            <div class="message bot">Halo! Saya ISSAC (XM1). Kamu mau tahu apa tentang ISC?</div>
         </div>
-        <div class="input-box">
-            <input type="text" id="userInput" placeholder="Ketik pesan..." autocomplete="off">
-            <button onclick="kirimPesan()">Kirim</button>
-        </div>
+
+        <form class="input-area" id="chat-form">
+            <input type="text" id="user-input" placeholder="Ketik pesan..." autocomplete="off">
+            <button type="submit" id="send-btn">Kirim</button>
+        </form>
     </div>
 
-    <script>
-        const chatContent = document.getElementById('chat-content');
-
-        function createTypingIndicator() {
-            const div = document.createElement('div');
-            div.id = 'typing-indicator';
-            div.className = 'msg bot typing';
-            div.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-            return div;
-        }
-
-        function appendMessage(text, isUser, listData = []) {
-            const div = document.createElement('div');
-            div.className = `msg ${isUser ? 'user' : 'bot'}`;
-            div.innerText = text;
-
-            if (listData && listData.length > 0) {
-                const ul = document.createElement('ul');
-                listData.forEach(item => {
-                    const li = document.createElement('li');
-                    li.innerText = item;
-                    ul.appendChild(li);
-                });
-                div.appendChild(ul);
-            }
-
-            chatContent.appendChild(div);
-            chatContent.scrollTop = chatContent.scrollHeight;
-        }
-
-        async function kirimPesan() {
-            const input = document.getElementById('userInput');
-            const pesan = input.value.trim();
-            if (!pesan) return;
-
-            // Tampilkan pesan user
-            appendMessage(pesan, true);
-            input.value = '';
-
-            // Tampilkan indikator mengetik
-            const typingIndicator = createTypingIndicator();
-            chatContent.appendChild(typingIndicator);
-            chatContent.scrollTop = chatContent.scrollHeight;
-
-            try {
-                const response = await fetch('/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pesan: pesan })
-                });
-
-                const data = await response.json();
-                
-                // Hapus indikator mengetik & tampilkan jawaban
-                document.getElementById('typing-indicator').remove();
-                appendMessage(data.jawaban, false, data.list);
-
-            } catch (error) {
-                if(document.getElementById('typing-indicator')) document.getElementById('typing-indicator').remove();
-                appendMessage("Maaf, koneksi terputus. Coba lagi nanti.", false);
-            }
-        }
-
-        document.getElementById('userInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') kirimPesan();
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
