@@ -61,13 +61,14 @@ module.exports = async (req, res) => {
     }
 
     // =========================
-    // 🔥 BAGIAN AI (SUDAH DIPERBAIKI TOTAL)
+    // 🔥 BAGIAN AI (FIX FINAL)
     // =========================
     try {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
       const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash-latest", // 🔥 FIX MODEL
+        model: "gemini-1.5-flash",
+        apiVersion: "v1beta", // 🔥 INI YANG FIX ERROR 404
       });
 
       const result = await model.generateContent(userMsg);
@@ -75,12 +76,12 @@ module.exports = async (req, res) => {
       let text = "AI tidak memberi respon.";
 
       // ✅ HANDLE SEMUA FORMAT RESPONSE
-      if (result?.response) {
+      if (result && result.response) {
         if (typeof result.response.text === "function") {
           text = result.response.text();
-        } else {
+        } else if (result.response.candidates) {
           text =
-            result.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
+            result.response.candidates?.[0]?.content?.parts?.[0]?.text ||
             text;
         }
       }
@@ -91,7 +92,7 @@ module.exports = async (req, res) => {
       });
 
     } catch (aiError) {
-      console.log("AI ERROR:", aiError);
+      console.log("AI ERROR FULL:", aiError);
 
       return res.json({
         jawaban: "AI gagal merespon",
@@ -101,7 +102,7 @@ module.exports = async (req, res) => {
     }
 
   } catch (err) {
-    console.log("SERVER ERROR:", err);
+    console.log("SERVER ERROR FULL:", err);
 
     return res.json({
       jawaban: "Server error",
