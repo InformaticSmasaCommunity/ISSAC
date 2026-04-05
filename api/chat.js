@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const memoriIdentitas = require("./identitas.js"); // <--- Memanggil memori buatan
 
 module.exports = async (req, res) => {
   try {
@@ -11,11 +12,10 @@ module.exports = async (req, res) => {
     if (!userMsg) return res.json({ jawaban: "Pesan kosong.", list: [] });
 
     // =========================
-    // ✅ 1. LOAD & CEK DATABASE JSON
+    // ✅ 1. LOAD & CEK DATABASE JSON (Tetap Sama)
     // =========================
     let dbData;
     try {
-      // Menggunakan path.join dan process.cwd() agar aman di Vercel
       const dbPath = path.join(process.cwd(), "data.json");
       const raw = fs.readFileSync(dbPath, "utf8");
       dbData = JSON.parse(raw);
@@ -30,17 +30,15 @@ module.exports = async (req, res) => {
         }
       }
 
-      // JIKA KETEMU DI JSON, LANGSUNG KIRIM JAWABAN
       if (dataDitemukan) {
         return res.json({
           jawaban: dataDitemukan.jawaban,
           list: dataDitemukan.bagian || [],
-          sumber: "database_lokal" // Penanda untuk debug
+          sumber: "database_lokal"
         });
       }
     } catch (err) {
       console.error("Gagal baca JSON:", err.message);
-      // Lanjut ke Gemini jika JSON gagal dibaca
     }
 
     // =========================
@@ -50,12 +48,17 @@ module.exports = async (req, res) => {
       return res.json({ jawaban: "API Key tidak diset di server." });
     }
 
+    // Menggunakan URL v1beta untuk mendukung system_instruction
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // MENYELIPKAN MEMORI IDENTITAS
+          system_instruction: {
+            parts: [{ text: memoriIdentitas }]
+          },
           contents: [{ parts: [{ text: userMsg }] }]
         })
       }
