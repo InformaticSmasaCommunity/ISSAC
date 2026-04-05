@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const memoriIdentitas = require("./identitas.js"); // <--- Memanggil memori buatan
+const memoriIdentitas = require("./identitas.js"); // Memanggil memori identitas M1A1
 
 module.exports = async (req, res) => {
   try {
@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
     if (!userMsg) return res.json({ jawaban: "Pesan kosong.", list: [] });
 
     // =========================
-    // ✅ 1. LOAD & CEK DATABASE JSON (Tetap Sama)
+    // ✅ 1. LOAD & CEK DATABASE JSON
     // =========================
     let dbData;
     try {
@@ -42,24 +42,34 @@ module.exports = async (req, res) => {
     }
 
     // =========================
-    // 🔥 2. JIKA TIDAK ADA DI JSON, TANYA GEMINI
+    // 🔥 2. JIKA TIDAK ADA DI JSON, TANYA GEMINI 3.1
     // =========================
     if (!process.env.GEMINI_API_KEY) {
       return res.json({ jawaban: "API Key tidak diset di server." });
     }
 
-    // Menggunakan URL v1beta untuk mendukung system_instruction
+    // Menggunakan model gemini-3.1-flash-lite-preview sesuai hasil cek API kamu
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // MENYELIPKAN MEMORI IDENTITAS
+          // MENANAMKAN MEMORI IDENTITAS (SYSTEM INSTRUCTION)
           system_instruction: {
+            role: "system",
             parts: [{ text: memoriIdentitas }]
           },
-          contents: [{ parts: [{ text: userMsg }] }]
+          contents: [{ 
+            role: "user",
+            parts: [{ text: userMsg }] 
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.95,
+            topK: 64,
+            maxOutputTokens: 2048,
+          }
         })
       }
     );
@@ -67,10 +77,14 @@ module.exports = async (req, res) => {
     const data = await response.json();
     
     if (data.error) {
-      return res.json({ jawaban: "Google API Error", error: data.error.message });
+      return res.json({ 
+        jawaban: "Google API Error", 
+        error: data.error.message,
+        detail: "Pastikan model gemini-3.1-flash-lite-preview tersedia di region Anda." 
+      });
     }
 
-    const hasilAI = data.candidates?.[0]?.content?.parts?.[0]?.text || "AI tidak merespon.";
+    const hasilAI = data.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, ISSAC sedang mengalami gangguan teknis.";
 
     return res.json({
       jawaban: hasilAI,
